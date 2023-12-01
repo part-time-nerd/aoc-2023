@@ -246,5 +246,9 @@ zoneight234
         assert_eq!(calibration_value("oneight"), 18);
         assert_eq!(calibration_value("3oneight"), 38);
         assert_eq!(calibration_value("oneight9"), 19);
+        assert_eq!(calibration_value("one"), 11);
+        assert_eq!(calibration_value("onety"), 11);
+        assert_eq!(calibration_value("2asdf"), 22);
+        assert_eq!(calibration_value("9"), 99);
     }
 }
