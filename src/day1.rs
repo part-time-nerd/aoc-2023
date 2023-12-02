@@ -4,7 +4,7 @@ pub fn part1(input: &str) -> u32 {
         let mut first: Option<u32> = None;
         let mut last: Option<u32> = None;
         for c in l.chars() {
-            if c.is_digit(10) {
+            if c.is_ascii_digit() {
                 let digit = c.to_digit(10);
                 if first.is_none() {
                     first = digit;
@@ -35,9 +35,7 @@ impl WordNumber {
         let mut text_chars = text.chars();
         match text_chars.next() {
             Some('o') => {
-                if text_chars.next().is_some_and(|c| c == 'n')
-                    && text_chars.next().is_some_and(|c| c == 'e')
-                {
+                if text_chars.next().is_some_and(|c| c == 'n') && text_chars.next().is_some_and(|c| c == 'e') {
                     Some(Self::One)
                 } else {
                     None
@@ -65,18 +63,14 @@ impl WordNumber {
             },
             Some('f') => match text_chars.next() {
                 Some('o') => {
-                    if text_chars.next().is_some_and(|c| c == 'u')
-                        && text_chars.next().is_some_and(|c| c == 'r')
-                    {
+                    if text_chars.next().is_some_and(|c| c == 'u') && text_chars.next().is_some_and(|c| c == 'r') {
                         Some(Self::Four)
                     } else {
                         None
                     }
                 }
                 Some('i') => {
-                    if text_chars.next().is_some_and(|c| c == 'v')
-                        && text_chars.next().is_some_and(|c| c == 'e')
-                    {
+                    if text_chars.next().is_some_and(|c| c == 'v') && text_chars.next().is_some_and(|c| c == 'e') {
                         Some(Self::Five)
                     } else {
                         None
@@ -144,18 +138,17 @@ impl WordNumber {
     }
 }
 
-fn to_digit_sequence(input: &str) -> Vec<u32> {
+fn to_digit_sequence(mut input: &str) -> Vec<u32> {
     let mut digit_sequence: Vec<u32> = Vec::new();
-    let mut slice = &input[..];
 
-    while !slice.is_empty() {
+    while !input.is_empty() {
         // Slice is not empty, unwrap is safe
-        if let Some(digit) = slice.chars().next().unwrap().to_digit(10) {
+        if let Some(digit) = input.chars().next().unwrap().to_digit(10) {
             digit_sequence.push(digit);
-        } else if let Some(word_number) = WordNumber::from_front(slice) {
+        } else if let Some(word_number) = WordNumber::from_front(input) {
             digit_sequence.push(word_number.to_digit());
         }
-        slice = &slice[1..];
+        input = &input[1..];
     }
 
     digit_sequence
@@ -232,10 +225,7 @@ zoneight234
     fn test_to_digit_sequence() {
         assert_eq!(to_digit_sequence("1234"), [1, 2, 3, 4]);
         assert_eq!(to_digit_sequence("arandomstringoftext"), []);
-        assert_eq!(
-            to_digit_sequence("one24threeightwo7on9"),
-            [1, 2, 4, 3, 8, 2, 7, 9]
-        );
+        assert_eq!(to_digit_sequence("one24threeightwo7on9"), [1, 2, 4, 3, 8, 2, 7, 9]);
         assert_eq!(to_digit_sequence(""), []);
         assert_eq!(to_digit_sequence("arandomstringoftext"), []);
     }
