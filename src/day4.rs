@@ -9,14 +9,17 @@ struct Card {
 }
 
 impl Card {
-    fn points(&self) -> u32 {
+    fn num_winning(&self) -> usize {
         // Contains should be fast with such a small vector
-        let num_winning = self.my_numbers.iter().filter(|n| self.winning_numbers.contains(n)).count();
+        self.my_numbers.iter().filter(|n| self.winning_numbers.contains(n)).count()
+    }
+
+    fn points(&self) -> u32 {
+        let num_winning = self.num_winning();
         if num_winning == 0 {
             0
         } else {
-            // Take a power of two by left bitshift
-            1 << (num_winning - 1)
+            1 << (num_winning - 1) // Take a power of two by left bitshift
         }
     }
 }
@@ -40,6 +43,22 @@ impl FromStr for Card {
 pub fn part1(input: &str) -> u32 {
     // NOTE: this silently drops any parsing errors.
     input.lines().flat_map(|l| l.parse::<Card>()).map(|c| c.points()).sum()
+}
+
+pub fn part2(input: &str) -> u32 {
+    // NOTE: this silently drops any parsing errors.
+    let cards: Vec<Card> = input.lines().flat_map(|l| l.parse()).collect();
+    let mut counts: Vec<u32> = cards.iter().map(|_| 1).collect();
+
+    for (i, card) in cards.into_iter().enumerate() {
+        for j in (i + 1)..=(i + card.num_winning()) {
+            if j >= counts.len() {
+                break; // We have reached the end of the list of cards
+            }
+            counts[j] += counts[i];
+        }
+    }
+    counts.into_iter().sum()
 }
 
 #[cfg(test)]
@@ -73,11 +92,13 @@ Card 6: 31 18 13 56 72 | 74 77 10 23 35 67 36 11
     #[test]
     fn test_example() {
         assert_eq!(part1(EXAMPLE), 13);
+        assert_eq!(part2(EXAMPLE), 30);
     }
 
     #[test]
     fn test_solution() {
         let input = std::fs::read_to_string("inputs/day4.txt").unwrap();
         assert_eq!(part1(&input), 15205);
+        assert_eq!(part2(&input), 6189740);
     }
 }
