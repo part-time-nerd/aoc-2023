@@ -1,5 +1,5 @@
-use anyhow::{anyhow, bail, Context, Error, Result};
-use std::str::FromStr;
+use anyhow::{anyhow, Context, Error, Result};
+use std::{ops::Range, str::FromStr};
 
 #[derive(Debug, PartialEq)]
 struct Map {
@@ -19,27 +19,94 @@ impl FromStr for Map {
     }
 }
 
-// Can't figure out how to impl FromStr for Vec<Map> (if its even possible)
-fn parse_maps(input: &str) -> Result<Vec<Map>> {
-    let mut maps: Vec<Map> = Vec::new();
-    for l in input.lines().skip(1) {
-        maps.push(l.parse()?);
+impl Map {
+    fn domain(&self) -> Range<usize> {
+        self.source..self.source + self.length
     }
-    Ok(maps)
+
+    fn range(&self) -> Range<usize> {
+        self.dest..self.dest + self.length
+    }
+
+    fn map(&self, value: usize) -> Option<usize> {
+        if self.domain().contains(&value) {
+            Some(self.dest + value - self.source)
+        } else {
+            None
+        }
+    }
+
+    fn map_range(&self, values: Range<usize>) -> (Range<usize>, Range<usize>, Range<usize>) {
+        // Returns a triple (before, mapped_values, after)
+        if values.is_empty() {
+            return (Range::default(), Range::default(), Range::default());
+        }
+        match (self.map(values.start), self.map(values.end)) {
+            (Some(start), Some(end)) => (Range::default(), start..end, Range::default()),
+            (None, Some(end)) => (values.start..self.domain().start, self.range().start..end, Range::default()),
+            (Some(start), None) => (Range::default(), start..self.range().end, self.domain().end..values.end),
+            (None, None) => {
+                if values.start < self.domain().start {
+                    if values.end >= self.domain().end {
+                        (values.start..self.domain().start, self.range(), self.domain().end..values.end)
+                    } else {
+                        (values, Range::default(), Range::default())
+                    }
+                } else {
+                    (Range::default(), Range::default(), values)
+                }
+            }
+        }
+    }
+}
+
+#[derive(Default, Debug, PartialEq)]
+struct Maps(Vec<Map>);
+
+impl FromStr for Maps {
+    type Err = Error;
+    fn from_str(input: &str) -> Result<Self> {
+        let mut maps = Self::default();
+        for l in input.lines().skip(1) {
+            maps.0.push(l.parse()?);
+        }
+        Ok(maps)
+    }
+}
+
+impl Maps {
+    fn map(&self, value: usize) -> usize {
+        self.0.iter().find_map(|m| m.map(value)).unwrap_or(value)
+    }
+
+    fn map_ranges(&self, mut unmapped: Vec<Range<usize>>) -> Vec<Range<usize>> {
+        let mut mapped: Vec<Range<usize>> = Vec::new();
+
+        for map in self.0.iter() {
+            let mut new_unmapped: Vec<Range<usize>> = Vec::new();
+            for range in unmapped.into_iter() {
+                let (unmapped_before, mapped_values, unmapped_after) = map.map_range(range);
+                if !unmapped_before.is_empty() {
+                    new_unmapped.push(unmapped_before);
+                }
+                if !unmapped_after.is_empty() {
+                    new_unmapped.push(unmapped_after)
+                }
+                if !mapped_values.is_empty() {
+                    mapped.push(mapped_values);
+                }
+            }
+            unmapped = new_unmapped;
+        }
+        mapped.extend(unmapped); // Unmapped values are mapped identically
+        mapped
+    }
 }
 
 #[derive(Debug, PartialEq)]
 struct Almanac {
     seeds: Vec<usize>,
-    // Just going to use Vec for the ranges its probably good enough
-    // TODO: Can we do binary search on this so its fast?
-    seed_to_soil: Vec<Map>,
-    soil_to_fert: Vec<Map>,
-    fert_to_water: Vec<Map>,
-    water_to_light: Vec<Map>,
-    light_to_temp: Vec<Map>,
-    temp_to_humid: Vec<Map>,
-    humid_to_loc: Vec<Map>,
+    maps: Vec<Maps>,
 }
 
 impl FromStr for Almanac {
@@ -54,16 +121,17 @@ impl FromStr for Almanac {
             }
             Ok(Self {
                 seeds,
-                seed_to_soil: parse_maps(s2s)?,
-                soil_to_fert: parse_maps(s2f)?,
-                fert_to_water: parse_maps(f2w)?,
-                water_to_light: parse_maps(w2l)?,
-                light_to_temp: parse_maps(l2t)?,
-                temp_to_humid: parse_maps(t2h)?,
-                humid_to_loc: parse_maps(h2l)?,
+                maps: vec![
+                    s2s.parse()?,
+                    s2f.parse()?,
+                    f2w.parse()?,
+                    w2l.parse()?,
+                    l2t.parse()?,
+                    t2h.parse()?,
+                    h2l.parse()?,
+                ],
             })
         } else {
-            println!("{:?}", input_sections);
             Err(anyhow!("Could not parse all of the sections from the input"))
         }
     }
@@ -71,21 +139,9 @@ impl FromStr for Almanac {
 
 impl Almanac {
     fn seed_location(&self, seed: usize) -> usize {
-        let all_maps = [
-            &self.seed_to_soil,
-            &self.soil_to_fert,
-            &self.fert_to_water,
-            &self.water_to_light,
-            &self.light_to_temp,
-            &self.temp_to_humid,
-            &self.humid_to_loc,
-        ];
         let mut current = seed;
-        for maps in all_maps {
-            if let Some(map) = maps.iter().filter(|m| current >= m.source && current < m.source + m.length).next() {
-                current = map.dest + current - map.source;
-            }
-            // No mapping found: keep the same source -> dest
+        for map in &self.maps {
+            current = map.map(current);
         }
         current
     }
@@ -93,11 +149,33 @@ impl Almanac {
     fn seed_locations(&self) -> Vec<usize> {
         self.seeds.iter().map(|&seed| self.seed_location(seed)).collect()
     }
+
+    fn seed_ranges(&self) -> Vec<Range<usize>> {
+        // The interpretation of seeds as per part 2
+        let mut seed_ranges: Vec<Range<usize>> = Vec::new();
+        for chunk in self.seeds.chunks(2) {
+            if let &[start, length] = chunk {
+                seed_ranges.push(start..start + length);
+            } else {
+                panic!("Did not expect an odd number of seeds")
+            }
+        }
+        seed_ranges
+    }
+
+    fn seed_range_locations(&self) -> Vec<Range<usize>> {
+        self.maps.iter().fold(self.seed_ranges(), |current, map| map.map_ranges(current))
+    }
 }
 
 pub fn part1(input: &str) -> Result<usize> {
     let almanac: Almanac = input.parse()?;
     almanac.seed_locations().into_iter().min().context("No seed locations")
+}
+
+pub fn part2(input: &str) -> Result<usize> {
+    let almanac: Almanac = input.parse()?;
+    almanac.seed_range_locations().into_iter().map(|r| r.start).min().context("No seed range locations")
 }
 
 #[cfg(test)]
@@ -142,51 +220,57 @@ humidity-to-location map:
     fn test_parse_almanac() {
         let expected = Almanac {
             seeds: vec![79, 14, 55, 13],
-            seed_to_soil: vec![Map { dest: 50, source: 98, length: 2 }, Map { dest: 52, source: 50, length: 48 }],
-            soil_to_fert: vec![
-                Map { dest: 0, source: 15, length: 37 },
-                Map { dest: 37, source: 52, length: 2 },
-                Map { dest: 39, source: 0, length: 15 },
+            maps: vec![
+                Maps(vec![Map { dest: 50, source: 98, length: 2 }, Map { dest: 52, source: 50, length: 48 }]),
+                Maps(vec![
+                    Map { dest: 0, source: 15, length: 37 },
+                    Map { dest: 37, source: 52, length: 2 },
+                    Map { dest: 39, source: 0, length: 15 },
+                ]),
+                Maps(vec![
+                    Map { dest: 49, source: 53, length: 8 },
+                    Map { dest: 0, source: 11, length: 42 },
+                    Map { dest: 42, source: 0, length: 7 },
+                    Map { dest: 57, source: 7, length: 4 },
+                ]),
+                Maps(vec![Map { dest: 88, source: 18, length: 7 }, Map { dest: 18, source: 25, length: 70 }]),
+                Maps(vec![
+                    Map { dest: 45, source: 77, length: 23 },
+                    Map { dest: 81, source: 45, length: 19 },
+                    Map { dest: 68, source: 64, length: 13 },
+                ]),
+                Maps(vec![Map { dest: 0, source: 69, length: 1 }, Map { dest: 1, source: 0, length: 69 }]),
+                Maps(vec![Map { dest: 60, source: 56, length: 37 }, Map { dest: 56, source: 93, length: 4 }]),
             ],
-            fert_to_water: vec![
-                Map { dest: 49, source: 53, length: 8 },
-                Map { dest: 0, source: 11, length: 42 },
-                Map { dest: 42, source: 0, length: 7 },
-                Map { dest: 57, source: 7, length: 4 },
-            ],
-            water_to_light: vec![Map { dest: 88, source: 18, length: 7 }, Map { dest: 18, source: 25, length: 70 }],
-            light_to_temp: vec![
-                Map { dest: 45, source: 77, length: 23 },
-                Map { dest: 81, source: 45, length: 19 },
-                Map { dest: 68, source: 64, length: 13 },
-            ],
-            temp_to_humid: vec![Map { dest: 0, source: 69, length: 1 }, Map { dest: 1, source: 0, length: 69 }],
-            humid_to_loc: vec![Map { dest: 60, source: 56, length: 37 }, Map { dest: 56, source: 93, length: 4 }],
         };
-
         assert_eq!(EXAMPLE.parse::<Almanac>().unwrap(), expected);
     }
 
     #[test]
     fn test_seed_location() {
-        let almanac: Almanac = EXAMPLE.parse().unwrap();
-        assert_eq!(almanac.seed_location(79), 82);
+        assert_eq!(EXAMPLE.parse::<Almanac>().unwrap().seed_location(79), 82);
     }
 
     #[test]
     fn test_seed_locations() {
-        let almanac: Almanac = EXAMPLE.parse().unwrap();
-        assert_eq!(almanac.seed_locations(), [82, 43, 86, 35]);
+        assert_eq!(EXAMPLE.parse::<Almanac>().unwrap().seed_locations(), [82, 43, 86, 35]);
+    }
+
+    #[test]
+    fn test_seed_ranges() {
+        assert_eq!(EXAMPLE.parse::<Almanac>().unwrap().seed_ranges(), [79..93, 55..68])
     }
 
     #[test]
     fn test_example() {
         assert_eq!(part1(EXAMPLE).unwrap(), 35);
+        assert_eq!(part2(EXAMPLE).unwrap(), 46);
     }
 
     #[test]
     fn test_solution() {
         let input = std::fs::read_to_string("inputs/day5.txt").unwrap();
         assert_eq!(part1(&input).unwrap(), 111627841);
+        assert_eq!(part2(&input).unwrap(), 69323688);
     }
 }
