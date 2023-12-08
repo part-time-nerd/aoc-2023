@@ -1,9 +1,6 @@
 use anyhow::{anyhow, Error, Result};
 use std::{cmp::Ordering, collections::HashMap, str::FromStr};
 
-// #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Copy, Clone, Hash)]
-// struct Card(u8);
-
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Copy, Hash)]
 enum Card {
     Two = 2,
@@ -43,13 +40,13 @@ impl From<char> for Card {
 }
 
 #[derive(PartialEq, Eq, Debug)]
-struct Hand {
+struct HandP1 {
     cards: [Card; 5],
     hand_type: HandType,
     bid: usize,
 }
 
-impl Ord for Hand {
+impl Ord for HandP1 {
     fn cmp(&self, other: &Self) -> Ordering {
         match self.hand_type.cmp(&other.hand_type) {
             Ordering::Equal => self.cards.cmp(&other.cards),
@@ -58,12 +55,71 @@ impl Ord for Hand {
     }
 }
 
-impl PartialOrd for Hand {
+impl PartialOrd for HandP1 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
+impl FromStr for HandP1 {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self> {
+        if let Some((cards, bid)) = s.split_once(' ') {
+            let cards: [Card; 5] = cards.chars().map(|c| c.into()).collect::<Vec<Card>>()[..].try_into()?;
+            Ok(Self { cards, bid: bid.parse()?, hand_type: HandType::parse_p1(&cards) })
+        } else {
+            Err(anyhow!("Could not split the hand into a (cards, bid) tuple: {s}"))
+        }
+    }
+}
+
+#[derive(PartialEq, Eq, Debug)]
+struct HandP2 {
+    cards: [Card; 5],
+    hand_type: HandType,
+    bid: usize,
+}
+
+impl Ord for HandP2 {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.hand_type.cmp(&other.hand_type) {
+            Ordering::Equal => {
+                // Could update the cards to contain a Joker, but I will just manually implement this instead
+                for (a, b) in self.cards.iter().zip(other.cards.iter()) {
+                    match (a, b) {
+                        (Card::Jack, Card::Jack) => {}
+                        (Card::Jack, _) => return Ordering::Less,
+                        (_, Card::Jack) => return Ordering::Greater,
+                        (_, _) => match a.cmp(b) {
+                            Ordering::Equal => {}
+                            ordering => return ordering,
+                        },
+                    }
+                }
+                Ordering::Equal
+            }
+            ordering => ordering,
+        }
+    }
+}
+
+impl PartialOrd for HandP2 {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl FromStr for HandP2 {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self> {
+        if let Some((cards, bid)) = s.split_once(' ') {
+            let cards: [Card; 5] = cards.chars().map(|c| c.into()).collect::<Vec<Card>>()[..].try_into()?;
+            Ok(Self { cards, bid: bid.parse()?, hand_type: HandType::parse_p2(&cards) })
+        } else {
+            Err(anyhow!("Could not split the hand into a (cards, bid) tuple: {s}"))
+        }
+    }
+}
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd)]
 enum HandType {
     HighCard,
@@ -75,8 +131,8 @@ enum HandType {
     FiveOfAKind,
 }
 
-impl From<&[Card; 5]> for HandType {
-    fn from(cards: &[Card; 5]) -> Self {
+impl HandType {
+    fn parse_p1(cards: &[Card; 5]) -> Self {
         let mut counts: HashMap<Card, u8> = HashMap::default();
 
         for card in cards.iter() {
@@ -104,22 +160,61 @@ impl From<&[Card; 5]> for HandType {
             _ => panic!("Unexpected number of entries"),
         }
     }
-}
 
-impl FromStr for Hand {
-    type Err = Error;
-    fn from_str(s: &str) -> Result<Self> {
-        if let Some((cards, bid)) = s.split_once(' ') {
-            let cards: [Card; 5] = cards.chars().map(|c| c.into()).collect::<Vec<Card>>()[..].try_into()?;
-            Ok(Self { cards, bid: bid.parse()?, hand_type: (&cards).into() })
-        } else {
-            Err(anyhow!("Could not split the hand into a (cards, bid) tuple: {s}"))
+    fn upgrade_single_joker(&self) -> Self {
+        match self {
+            Self::HighCard => Self::OnePair,
+            Self::OnePair => Self::ThreeOfAKind,
+            Self::TwoPair => Self::FullHouse,
+            Self::ThreeOfAKind => Self::FourOfAKind,
+            Self::FullHouse => panic!("Cannot upgrade full house with a single joker"),
+            Self::FourOfAKind => Self::FiveOfAKind,
+            Self::FiveOfAKind => panic!("Cannot upgrade five of a kind with a single joker"),
+        }
+    }
+
+    fn upgrade_two_jokers(&self) -> Self {
+        match self {
+            Self::HighCard => panic!("There should be a pair of jokers: high card is impossible"),
+            Self::OnePair => Self::ThreeOfAKind, // Pair is jokers
+            Self::TwoPair => Self::FourOfAKind,  // One pair is jokers
+            Self::ThreeOfAKind => panic!("There should be a pair of jokers: three of a kind means 0, 1, or 3 jokers"),
+            Self::FullHouse => Self::FiveOfAKind, // The two cards are jokers
+            Self::FourOfAKind => panic!("Cannot upgrade four of a kind with a pair of jokers"),
+            Self::FiveOfAKind => panic!("Cannot upgrade five of a kind with a pair of jokers"),
+        }
+    }
+
+    fn parse_p2(cards: &[Card; 5]) -> Self {
+        let remaining_cards: Vec<&Card> = cards.iter().filter(|&&c| c != Card::Jack).collect();
+        match remaining_cards.len() {
+            5 => Self::parse_p1(cards),
+            0 | 1 => Self::FiveOfAKind,
+            2 => {
+                if remaining_cards[0] == remaining_cards[1] {
+                    Self::FiveOfAKind
+                } else {
+                    Self::FourOfAKind
+                }
+            }
+            3 => Self::parse_p1(cards).upgrade_two_jokers(),
+            4 => Self::parse_p1(cards).upgrade_single_joker(),
+            _ => panic!(),
         }
     }
 }
 
 pub fn part1(input: &str) -> Result<usize> {
-    let mut hands: Vec<Hand> = Vec::new();
+    let mut hands: Vec<HandP1> = Vec::new();
+    for hand in input.lines() {
+        hands.push(hand.parse()?);
+    }
+    hands.sort();
+    Ok(hands.into_iter().enumerate().map(|(i, hand)| (i + 1) * hand.bid).sum())
+}
+
+pub fn part2(input: &str) -> Result<usize> {
+    let mut hands: Vec<HandP2> = Vec::new();
     for hand in input.lines() {
         hands.push(hand.parse()?);
     }
@@ -139,14 +234,27 @@ QQQJA 483
 ";
 
     #[test]
-    fn test_hand_from_string() {
-        let hand: Hand = "32T3K 765".parse().unwrap();
+    fn test_hand_p1_from_string() {
+        let hand: HandP1 = "32T3K 765".parse().unwrap();
         assert_eq!(
             hand,
-            Hand {
+            HandP1 {
                 cards: [Card::Three, Card::Two, Card::Ten, Card::Three, Card::King],
                 hand_type: HandType::OnePair,
                 bid: 765
+            }
+        );
+    }
+
+    #[test]
+    fn test_hand_p2_from_string() {
+        let hand: HandP2 = "KTJJT 220".parse().unwrap();
+        assert_eq!(
+            hand,
+            HandP2 {
+                cards: [Card::King, Card::Ten, Card::Jack, Card::Jack, Card::Ten],
+                hand_type: HandType::FourOfAKind,
+                bid: 220
             }
         );
     }
@@ -161,17 +269,17 @@ QQQJA 483
 
     #[test]
     fn test_hand_ordering() {
-        let h1 = Hand {
+        let h1 = HandP1 {
             cards: [Card::Three, Card::Four, Card::Five, Card::Six, Card::Nine],
             hand_type: HandType::HighCard,
             bid: 0,
         };
-        let h2 = Hand {
+        let h2 = HandP1 {
             cards: [Card::Three, Card::Four, Card::Five, Card::Eight, Card::Six],
             hand_type: HandType::HighCard,
             bid: 0,
         };
-        let h3 = Hand {
+        let h3 = HandP1 {
             cards: [Card::Two, Card::Two, Card::Three, Card::Four, Card::Five],
             hand_type: HandType::OnePair,
             bid: 0,
@@ -183,13 +291,19 @@ QQQJA 483
     }
 
     #[test]
-    fn test_example() {
+    fn test_example_p1() {
         assert_eq!(part1(EXAMPLE).unwrap(), 6440);
+    }
+
+    #[test]
+    fn test_example_p2() {
+        assert_eq!(part2(EXAMPLE).unwrap(), 5905);
     }
 
     #[test]
     fn test_solution() {
         let input = std::fs::read_to_string("inputs/day7.txt").unwrap();
         assert_eq!(part1(&input).unwrap(), 256448566);
+        assert_eq!(part2(&input).unwrap(), 254412181);
     }
 }
