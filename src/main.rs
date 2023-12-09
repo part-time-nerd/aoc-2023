@@ -42,6 +42,6 @@ fn main() {
     // println!("8-2: {}", day8::part2(&input).unwrap());
 
     let input = std::fs::read_to_string("inputs/day9.txt").unwrap();
-    println!("9-1: {}", day9::part1(&input).unwrap());
-    println!("9-2: {}", day9::part2(&input).unwrap());
+    println!("9-1: {}", day9::part1(&input));
+    println!("9-2: {}", day9::part2(&input));
 }
