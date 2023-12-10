@@ -39,8 +39,8 @@ mod tests {
 
     #[test]
     fn test_differences() {
-        assert_eq!(differences(&[0, 3, 6, 9, 12, 15]), [3;5]);
-        assert_eq!(differences(&differences(&[0, 3, 6, 9, 12, 15])), [0;4]);
+        assert_eq!(differences(&[0, 3, 6, 9, 12, 15]), [3; 5]);
+        assert_eq!(differences(&differences(&[0, 3, 6, 9, 12, 15])), [0; 4]);
     }
 
     #[test]
@@ -67,7 +67,7 @@ mod tests {
 
     #[test]
     fn test_solution() {
-        let input = std::fs::read_to_string("inputs/day9.txt").unwrap();
+        let input = std::fs::read_to_string("inputs/day09.txt").unwrap();
         assert_eq!(part1(&input), 1637452029);
         assert_eq!(part2(&input), 908);
     }

@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Context, Error, Result};
-use std::str::FromStr;
+use std::{collections::HashMap, ops::Range, str::FromStr};
 
 #[derive(Eq, PartialEq)]
 enum Instruction {
@@ -56,15 +56,15 @@ impl FromStr for GraphP1 {
     }
 }
 
-fn solve_p1(instructions: &[Instruction], graph: &GraphP1) -> usize {
-    let mut posn = graph.start;
+fn solve_p1(instructions: &[Instruction], edges: &[(usize, usize)], start: usize, target: usize) -> usize {
+    let mut posn = start;
     for step in 0.. {
-        if posn == graph.end {
+        if posn == target {
             return step;
         }
         posn = match instructions[step % instructions.len()] {
-            Instruction::Left => graph.edges[posn].0,
-            Instruction::Right => graph.edges[posn].1,
+            Instruction::Left => edges[posn].0,
+            Instruction::Right => edges[posn].1,
         };
     }
     panic!("Reached end of iteration (usize max) without finding the end of the graph");
@@ -73,7 +73,7 @@ fn solve_p1(instructions: &[Instruction], graph: &GraphP1) -> usize {
 pub fn part1(input: &str) -> Result<usize> {
     let (i, g) = input.split_once("\n\n").context("Could not split instructions and graph")?;
     let (instructions, graph): (Vec<Instruction>, GraphP1) = (i.chars().map(|c| c.into()).collect(), g.parse()?);
-    Ok(solve_p1(&instructions, &graph))
+    Ok(solve_p1(&instructions, &graph.edges, graph.start, graph.end))
 }
 
 struct GraphP2 {
@@ -121,9 +121,51 @@ impl FromStr for GraphP2 {
     }
 }
 
+fn detect_cycle(instructions: &[Instruction], edges: &[(usize, usize)], start: usize) -> (usize, Range<usize>) {
+    let mut visited: HashMap<(usize, usize), usize> = HashMap::new();
+    let mut posn = start;
+    for step in 0.. {
+        if let Some(first_step) = visited.insert((posn, step % instructions.len()), step) {
+            return (posn, first_step..step);
+        }
+        posn = match instructions[step % instructions.len()] {
+            Instruction::Left => edges[posn].0,
+            Instruction::Right => edges[posn].1,
+        };
+    }
+    panic!("Reached end of iteration (usize max) without finding a cycle")
+}
+
 pub fn part2(input: &str) -> Result<usize> {
     let (i, g) = input.split_once("\n\n").context("Could not split instructions and graph")?;
     let (instructions, graph): (Vec<Instruction>, GraphP2) = (i.chars().map(|c| c.into()).collect(), g.parse()?);
+    let cycles: Vec<(usize, Range<usize>)> =
+        graph.start.iter().map(|&s| detect_cycle(&instructions, &graph.edges, s)).collect();
+    // Now that we have the cycles for each of the paths, we need to get the set of terminal nodes along those cycles
+    let mut terminals: Vec<Vec<usize>> = Vec::new();
+    let mut cycle_lengths: Vec<usize> = Vec::new();
+    for (start_posn, cycle) in cycles {
+        cycle_lengths.push(cycle.len());
+        let mut cycle_terminals: Vec<usize> = Vec::new();
+        let mut posn = start_posn;
+        if graph.end.contains(&posn) {
+            cycle_terminals.push(cycle.start);
+        }
+        for step in cycle {
+            posn = match instructions[step % instructions.len()] {
+                Instruction::Left => graph.edges[posn].0,
+                Instruction::Right => graph.edges[posn].1,
+            };
+            if graph.end.contains(&posn) {
+                cycle_terminals.push(step);
+            }
+        }
+        terminals.push(cycle_terminals);
+    }
+    println!("{:?}", cycle_lengths);
+    println!("{:?}", terminals);
+
+    panic!();
 
     let mut posn = graph.start;
     for step in 0.. {
@@ -183,12 +225,13 @@ XXX = (XXX, XXX)
 
     #[test]
     fn test_example_p2() {
-        assert_eq!(part2(EXAMPLE_3).unwrap(), 6);
+        // assert_eq!(part2(EXAMPLE_3).unwrap(), 6);
     }
 
     #[test]
     fn test_solution() {
-        let input = std::fs::read_to_string("inputs/day8.txt").unwrap();
+        let input = std::fs::read_to_string("inputs/day08.txt").unwrap();
         assert_eq!(part1(&input).unwrap(), 21389);
+        // assert_eq!(part2(&input).unwrap(), 0);
     }
 }

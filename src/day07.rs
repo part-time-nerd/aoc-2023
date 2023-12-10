@@ -302,7 +302,7 @@ QQQJA 483
 
     #[test]
     fn test_solution() {
-        let input = std::fs::read_to_string("inputs/day7.txt").unwrap();
+        let input = std::fs::read_to_string("inputs/day07.txt").unwrap();
         assert_eq!(part1(&input).unwrap(), 256448566);
         assert_eq!(part2(&input).unwrap(), 254412181);
     }

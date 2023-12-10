@@ -1,47 +1,51 @@
-mod day1;
-mod day2;
-mod day3;
-mod day4;
-mod day5;
-mod day6;
-mod day7;
-mod day8;
-mod day9;
+mod day01;
+mod day02;
+mod day03;
+mod day04;
+mod day05;
+mod day06;
+mod day07;
+mod day08;
+mod day09;
+mod day10;
 
 fn main() {
-    let input = std::fs::read_to_string("inputs/day1.txt").unwrap();
-    println!("1-1: {}", day1::part1(&input));
-    println!("1-2: {}", day1::part2(&input));
+    let input = std::fs::read_to_string("inputs/day01.txt").unwrap();
+    println!("01-1: {}", day01::part1(&input));
+    println!("01-2: {}", day01::part2(&input));
 
-    let input = std::fs::read_to_string("inputs/day2.txt").unwrap();
-    println!("2-1: {}", day2::part1(&input).unwrap());
-    println!("2-2: {}", day2::part2(&input).unwrap());
+    let input = std::fs::read_to_string("inputs/day02.txt").unwrap();
+    println!("02-1: {}", day02::part1(&input).unwrap());
+    println!("02-2: {}", day02::part2(&input).unwrap());
 
-    let input = std::fs::read_to_string("inputs/day3.txt").unwrap();
-    println!("3-1: {}", day3::part1(&input));
-    println!("3-2: {}", day3::part2(&input));
+    let input = std::fs::read_to_string("inputs/day03.txt").unwrap();
+    println!("03-1: {}", day03::part1(&input));
+    println!("03-2: {}", day03::part2(&input));
 
-    let input = std::fs::read_to_string("inputs/day4.txt").unwrap();
-    println!("4-1: {}", day4::part1(&input));
-    println!("4-2: {}", day4::part2(&input));
+    let input = std::fs::read_to_string("inputs/day04.txt").unwrap();
+    println!("04-1: {}", day04::part1(&input));
+    println!("04-2: {}", day04::part2(&input));
 
-    let input = std::fs::read_to_string("inputs/day5.txt").unwrap();
-    println!("5-1: {}", day5::part1(&input).unwrap());
-    println!("5-2: {}", day5::part2(&input).unwrap());
+    let input = std::fs::read_to_string("inputs/day05.txt").unwrap();
+    println!("05-1: {}", day05::part1(&input).unwrap());
+    println!("05-2: {}", day05::part2(&input).unwrap());
 
-    let input = std::fs::read_to_string("inputs/day6.txt").unwrap();
-    println!("6-1: {}", day6::part1(&input).unwrap());
-    println!("6-2: {}", day6::part2(&input).unwrap());
+    let input = std::fs::read_to_string("inputs/day06.txt").unwrap();
+    println!("06-1: {}", day06::part1(&input).unwrap());
+    println!("06-2: {}", day06::part2(&input).unwrap());
 
-    let input = std::fs::read_to_string("inputs/day7.txt").unwrap();
-    println!("7-1: {}", day7::part1(&input).unwrap());
-    println!("7-2: {}", day7::part2(&input).unwrap());
+    let input = std::fs::read_to_string("inputs/day07.txt").unwrap();
+    println!("07-1: {}", day07::part1(&input).unwrap());
+    println!("07-2: {}", day07::part2(&input).unwrap());
 
-    let input = std::fs::read_to_string("inputs/day8.txt").unwrap();
-    println!("8-1: {}", day8::part1(&input).unwrap());
-    // println!("8-2: {}", day8::part2(&input).unwrap());
+    let input = std::fs::read_to_string("inputs/day08.txt").unwrap();
+    println!("08-1: {}", day08::part1(&input).unwrap());
+    // println!("08-2: {}", day08::part2(&input).unwrap());
 
-    let input = std::fs::read_to_string("inputs/day9.txt").unwrap();
-    println!("9-1: {}", day9::part1(&input));
-    println!("9-2: {}", day9::part2(&input));
+    let input = std::fs::read_to_string("inputs/day09.txt").unwrap();
+    println!("09-1: {}", day09::part1(&input));
+    println!("09-2: {}", day09::part2(&input));
+
+    let input = std::fs::read_to_string("inputs/day10.txt").unwrap();
+    println!("10-1: {}", day10::part1(&input).unwrap());
 }

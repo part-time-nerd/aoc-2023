@@ -195,7 +195,7 @@ zoneight234
 
     #[test]
     fn test_solution() {
-        let input = std::fs::read_to_string("inputs/day1.txt").unwrap();
+        let input = std::fs::read_to_string("inputs/day01.txt").unwrap();
         assert_eq!(part1(&input), 55130);
         assert_eq!(part2(&input), 54985);
     }

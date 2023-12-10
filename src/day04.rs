@@ -97,7 +97,7 @@ Card 6: 31 18 13 56 72 | 74 77 10 23 35 67 36 11
 
     #[test]
     fn test_solution() {
-        let input = std::fs::read_to_string("inputs/day4.txt").unwrap();
+        let input = std::fs::read_to_string("inputs/day04.txt").unwrap();
         assert_eq!(part1(&input), 15205);
         assert_eq!(part2(&input), 6189740);
     }

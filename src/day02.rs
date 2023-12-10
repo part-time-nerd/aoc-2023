@@ -106,7 +106,7 @@ Game 5: 6 red, 1 blue, 3 green; 2 blue, 1 red, 2 green
 
     #[test]
     fn test_solution() {
-        let input = std::fs::read_to_string("inputs/day2.txt").unwrap();
+        let input = std::fs::read_to_string("inputs/day02.txt").unwrap();
         assert_eq!(part1(&input).unwrap(), 2551);
         assert_eq!(part2(&input).unwrap(), 62811);
     }

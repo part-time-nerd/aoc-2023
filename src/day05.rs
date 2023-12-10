@@ -269,7 +269,7 @@ humidity-to-location map:
 
     #[test]
     fn test_solution() {
-        let input = std::fs::read_to_string("inputs/day5.txt").unwrap();
+        let input = std::fs::read_to_string("inputs/day05.txt").unwrap();
         assert_eq!(part1(&input).unwrap(), 111627841);
         assert_eq!(part2(&input).unwrap(), 69323688);
     }
