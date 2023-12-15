@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use anyhow::{bail, Context, Error, Result};
 use pathfinding::directed::dijkstra::dijkstra_all;
 
@@ -96,9 +98,31 @@ pub fn part1(input: &str) -> Result<usize> {
     shortest_paths.iter().map(|(_node, (_previous, length))| *length as usize).max().context("No paths from start")
 }
 
+enum Spin {
+    Clockwise,
+    CounterClockwise,
+}
+
+fn loop_direction(matrix: &[Vec<Tile>]) -> Result<(Posn, Spin)> {
+    // Starting at start and travelling to next, what is the spin direction
+    let start = matrix_start_posn(&matrix).context("Could not find the start position")?;
+    let next_to_start = matrix_adjacency(&matrix, start);
+    let first_step = next_to_start[0]; // This is arbitrary: next_to_start[1] would give oposite spin
+    todo!();
+    let spin = Spin::Clockwise;
+    Ok((first_step, spin))
+}
+
 pub fn part2(input: &str) -> Result<usize> {
     let matrix = parse_input_matrix(input)?;
-    let nodes: Vec<Posn> = (0..matrix.len()).flat_map(|i| (0..matrix[i].len()).map(move |j| (i, j))).collect();
+
+    let inside_tiles: HashSet<Posn> = HashSet::new();
+
+    let start = matrix_start_posn(&matrix).context("Could not find the start position")?;
+    let next_to_start = matrix_adjacency(&matrix, start);
+
+    let mut current_loop_direction: Option<Spin> = None;
+
     todo!()
 }
 
@@ -177,12 +201,12 @@ L7JLJL-JLJLJL--JLJ.L
         assert_eq!(part1(COMPLEX_EXAMPLE_WITH_CRUD).unwrap(), 8);
     }
 
-    // #[test]
-    // fn test_example_part2() {
-    //     assert_eq!(part2(P2_EXAMPLE).unwrap(), 4);
-    //     assert_eq!(part2(LARGER_EXAMPLE).unwrap(), 10);
-    //     assert_eq!(part2(LARGER_EXAMPLE_WITH_CRUD).unwrap(), 10);
-    // }
+    #[test]
+    fn test_example_part2() {
+        // assert_eq!(part2(P2_EXAMPLE).unwrap(), 4);
+        // assert_eq!(part2(LARGER_EXAMPLE).unwrap(), 10);
+        // assert_eq!(part2(LARGER_EXAMPLE_WITH_CRUD).unwrap(), 10);
+    }
 
     #[test]
     fn test_solution() {

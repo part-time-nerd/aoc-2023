@@ -33,7 +33,6 @@ fn total_distance(galaxies: &[Posn]) -> usize {
         }
     }
     total_distance
-
 }
 
 pub fn part1(input: &str) -> usize {
