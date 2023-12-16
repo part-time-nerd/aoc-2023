@@ -1,7 +1,7 @@
 use anyhow::{bail, Error, Result};
 use std::{collections::HashMap, str::FromStr};
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
 enum Rock {
     Round,
     Square,
@@ -20,7 +20,7 @@ impl TryFrom<char> for Rock {
     }
 }
 
-#[derive(Default, Eq, PartialEq, Debug, Hash)]
+#[derive(Default, Eq, PartialEq, Debug)]
 struct Platform(Vec<Vec<Rock>>);
 
 impl FromStr for Platform {
@@ -39,54 +39,40 @@ impl FromStr for Platform {
 }
 
 impl Platform {
-    fn transpose(&self) -> Self {
-        let mut transposed = Self::default();
-        for col in 0..self.0[0].len() {
-            let mut column: Vec<Rock> = Vec::new();
-            for row in 0..self.0.len() {
-                column.push(self.0[row][col]);
-            }
-            transposed.0.push(column)
-        }
-        transposed
-    }
-
-    fn tilt_north(&self) -> Self {
-        let mut columnar = self.transpose();
-        for column in &mut columnar.0 {
+    fn tilt_north(mut self) -> Self {
+        for j in 0..self.0[0].len() {
             let mut next_available_slot = 0;
-            for i in 0..column.len() {
-                match column[i] {
+            for i in 0..self.0.len() {
+                match self.0[i][j] {
                     Rock::None => (),
                     Rock::Square => next_available_slot = i + 1,
                     Rock::Round => {
-                        column[i] = Rock::None;
-                        column[next_available_slot] = Rock::Round;
+                        self.0[i][j] = Rock::None;
+                        self.0[next_available_slot][j] = Rock::Round;
                         next_available_slot += 1;
                     }
                 }
             }
         }
-        columnar.transpose()
+        self
     }
 
-    fn tilt_south(&self) -> Self {
-        let mut columnar = self.transpose();
-        for column in &mut columnar.0 {
-            let mut next_available_slot = column.len() - 1;
-            for i in (0..column.len()).rev() {
-                match column[i] {
+    fn tilt_south(mut self) -> Self {
+        for j in 0..self.0[0].len() {
+            let mut next_available_slot = self.0[0].len() - 1;
+            for i in (0..self.0.len()).rev() {
+                match self.0[i][j] {
                     Rock::None => (),
                     Rock::Square => next_available_slot = i.saturating_sub(1),
                     Rock::Round => {
-                        column[i] = Rock::None;
-                        column[next_available_slot] = Rock::Round;
+                        self.0[i][j] = Rock::None;
+                        self.0[next_available_slot][j] = Rock::Round;
                         next_available_slot = next_available_slot.saturating_sub(1);
                     }
                 }
             }
         }
-        columnar.transpose()
+        self
     }
 
     fn tilt_west(mut self) -> Self {
@@ -125,7 +111,7 @@ impl Platform {
         self
     }
 
-    fn tilt_cycle(&self) -> Self {
+    fn tilt_cycle(self) -> Self {
         self.tilt_north().tilt_west().tilt_south().tilt_east()
     }
 
@@ -137,6 +123,19 @@ impl Platform {
         }
         total_value
     }
+
+    fn identity(&self) -> Vec<(usize, usize)> {
+        // Returns a (sorted) vector of round rocks. This is the relevant piece of cycle detection
+        let mut round_rocks: Vec<(usize, usize)> = Vec::new();
+        for (i, row) in self.0.iter().enumerate() {
+            for (j, r) in row.iter().enumerate() {
+                if r == &Rock::Round {
+                    round_rocks.push((i, j));
+                }
+            }
+        }
+        round_rocks
+    }
 }
 
 pub fn part1(input: &str) -> Result<usize> {
@@ -145,28 +144,18 @@ pub fn part1(input: &str) -> Result<usize> {
 
 pub fn part2(input: &str) -> Result<usize> {
     let mut platform: Platform = input.parse()?;
-    let mut visited: HashMap<Platform, usize> = HashMap::default();
+    let mut visited: HashMap<Vec<(usize, usize)>, usize> = HashMap::default();
     const NUM_ITERATIONS: usize = 1000000000;
 
     for i in 0..NUM_ITERATIONS {
-        let next_platform = platform.tilt_cycle();
-        if let Some(visited_before) = visited.insert(platform, i) {
-            // We have detected a cycle
-            let cycle_length = i - visited_before;
-            let mut remaining_iterations = (NUM_ITERATIONS - visited_before) % cycle_length;
-            if remaining_iterations == 0 {
-                // bit hacky: because we already computed the next platform and move the current one
-                // we will need to cycle an extra time if the current platform is the ending state.
-                remaining_iterations = cycle_length;
-            }
-            platform = next_platform;
-            // Remove 1 since we already computed one iteration
-            for _ in 0..(remaining_iterations - 1) {
+        if let Some(visited_before) = visited.insert(platform.identity(), i) {
+            // There is a cycle: compute the final platform based on the remaining iterations after cycling
+            for _ in 0..((NUM_ITERATIONS - visited_before) % (i - visited_before)) {
                 platform = platform.tilt_cycle();
             }
             break;
         }
-        platform = next_platform;
+        platform = platform.tilt_cycle();
     }
     Ok(platform.load_on_north_support_beams())
 }
@@ -216,17 +205,6 @@ O..#.OO...
         let platform: Platform = EXAMPLE.parse().unwrap();
         let platform_tilted_north: Platform = EXAMPLE_TILTED_NORTH.parse().unwrap();
         assert_eq!(platform.tilt_north(), platform_tilted_north);
-        assert_eq!(platform.tilt_south().tilt_north(), platform_tilted_north);
-    }
-
-    #[test]
-    fn test_transpose() {
-        let platform: Platform = "#.#\n.O.".parse().unwrap();
-        let expected: Platform = "#.\n.O\n#.".parse().unwrap();
-        assert_eq!(platform.transpose(), expected);
-
-        let example: Platform = EXAMPLE.parse().unwrap();
-        assert_eq!(example.transpose().transpose(), example);
     }
 
     #[test]
