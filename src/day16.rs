@@ -1,4 +1,7 @@
-use std::{collections::HashSet, str::FromStr};
+use std::{
+    collections::{HashMap, HashSet},
+    str::FromStr,
+};
 
 use anyhow::{bail, Error, Result};
 
@@ -92,63 +95,113 @@ fn try_move(posn: &Posn, direction: &Direction, contraption_dimensions: &Posn) -
 }
 
 impl Contraption {
+    fn dimensions(&self) -> Posn {
+        (self.0.len(), self.0[0].len())
+    }
+
+    // fn energized_tiles_with_cache<'a>(&self, beam: Beam, cache: &mut HashMap<Beam, &'a [Vec<bool>]>) -> &'a [Vec<bool>] {
+    //     if let Some(&energized_tiles) = cache.get(&beam) {
+    //         return energized_tiles;
+    //     }
+    //     match self.0[beam.position.0][beam.position.1] {
+    //         Tile::Empty => {
+    //             if let Some(new_beam) = self.try_move(&beam) {
+    //                 let energized_tiles = self.energized_tiles_with_cache(new_beam, cache);
+    //                 // TODO: this will break with a loop
+    //                 cache.insert(beam, energized_tiles);
+    //                 return energized_tiles;
+    //             }
+    //         }
+    //         Tile::MirrorFwd => {
+    //             let direction = match beam.direction {
+    //                 Direction::North => Direction::East,
+    //                 Direction::South => Direction::West,
+    //                 Direction::East => Direction::North,
+    //                 Direction::West => Direction::South,
+    //             };
+    //             if let Some(new_beam) = self.try_move(&Beam{position: beam.position, direction }) {
+    //                 let energized_tiles = self.energized_tiles_with_cache(new_beam, cache);
+    //                 // TODO: this will break with a loop
+    //                 cache.insert(beam, energized_tiles);
+    //                 return energized_tiles;
+    //             }
+    //         }
+    //         Tile::MirrorBack => {
+    //             let direction = match beam.direction {
+    //                 Direction::North => Direction::West,
+    //                 Direction::South => Direction::East,
+    //                 Direction::East => Direction::South,
+    //                 Direction::West => Direction::North,
+    //             };
+    //             if let Some(new_beam) = self.try_move(&Beam{position: beam.position, direction }) {
+    //                 let energized_tiles = self.energized_tiles_with_cache(new_beam, cache);
+    //                 // TODO: this will break with a loop
+    //                 cache.insert(beam, energized_tiles);
+    //                 return energized_tiles;
+    //             }
+    //         }
+    //         Tile::SplitterVert => {todo !()
+    //         }
+    //         Tile::SplitterHori => {todo !()
+    //         }
+    //     }
+    //     todo!()
+    // }
+
+    fn try_move(&self, beam: &Beam) -> Option<Beam> {
+        try_move(&beam.position, &beam.direction, &self.dimensions())
+            .map(|position| Beam { direction: beam.direction, position })
+    }
+
     fn energized_tiles(&self, start: Beam) -> Vec<Vec<bool>> {
         let mut energized_tiles: Vec<Vec<bool>> = self.0.iter().map(|r| r.iter().map(|_| false).collect()).collect();
         let mut beams: Vec<Beam> = vec![start];
         let mut beam_cache: HashSet<Beam> = HashSet::default();
         beam_cache.insert(start);
-        let contraption_dimensions: Posn = (self.0.len(), self.0[0].len());
         while !beams.is_empty() {
             let mut new_beams: Vec<Beam> = Vec::new();
-            for mut beam in beams {
+            for beam in beams {
                 energized_tiles[beam.position.0][beam.position.1] = true;
                 match self.0[beam.position.0][beam.position.1] {
                     Tile::Empty => {
-                        if let Some(position) = try_move(&beam.position, &beam.direction, &contraption_dimensions) {
-                            beam.position = position;
-                            new_beams.push(beam);
+                        if let Some(new_beam) = self.try_move(&beam) {
+                            new_beams.push(new_beam);
                         }
                     }
                     Tile::MirrorFwd => {
-                        beam.direction = match beam.direction {
+                        let direction = match beam.direction {
                             Direction::North => Direction::East,
                             Direction::South => Direction::West,
                             Direction::East => Direction::North,
                             Direction::West => Direction::South,
                         };
-                        if let Some(position) = try_move(&beam.position, &beam.direction, &contraption_dimensions) {
-                            beam.position = position;
-                            new_beams.push(beam);
+                        if let Some(new_beam) = self.try_move(&Beam { position: beam.position, direction }) {
+                            new_beams.push(new_beam);
                         }
                     }
                     Tile::MirrorBack => {
-                        beam.direction = match beam.direction {
+                        let direction = match beam.direction {
                             Direction::North => Direction::West,
                             Direction::South => Direction::East,
                             Direction::East => Direction::South,
                             Direction::West => Direction::North,
                         };
-                        if let Some(position) = try_move(&beam.position, &beam.direction, &contraption_dimensions) {
-                            beam.position = position;
-                            new_beams.push(beam);
+                        if let Some(new_beam) = self.try_move(&Beam { position: beam.position, direction }) {
+                            new_beams.push(new_beam);
                         }
                     }
                     Tile::SplitterVert => {
                         match beam.direction {
                             Direction::North | Direction::South => {
-                                if let Some(position) =
-                                    try_move(&beam.position, &beam.direction, &contraption_dimensions)
-                                {
-                                    beam.position = position;
-                                    new_beams.push(beam);
+                                if let Some(new_beam) = self.try_move(&beam) {
+                                    new_beams.push(new_beam);
                                 }
                             }
                             Direction::East | Direction::West => {
                                 for direction in [Direction::North, Direction::South] {
-                                    if let Some(position) =
-                                        try_move(&beam.position, &direction, &contraption_dimensions)
+                                    if let Some(new_beam) = self.try_move(&Beam { position: beam.position, direction })
                                     {
-                                        new_beams.push(Beam { position, direction });
+                                        new_beams.push(new_beam);
                                     }
                                 }
                             }
@@ -157,19 +210,15 @@ impl Contraption {
                     Tile::SplitterHori => {
                         match beam.direction {
                             Direction::East | Direction::West => {
-                                if let Some(position) =
-                                    try_move(&beam.position, &beam.direction, &contraption_dimensions)
-                                {
-                                    beam.position = position;
-                                    new_beams.push(beam);
+                                if let Some(new_beam) = self.try_move(&beam) {
+                                    new_beams.push(new_beam);
                                 }
                             }
                             Direction::North | Direction::South => {
                                 for direction in [Direction::East, Direction::West] {
-                                    if let Some(position) =
-                                        try_move(&beam.position, &direction, &contraption_dimensions)
+                                    if let Some(new_beam) = self.try_move(&Beam { position: beam.position, direction })
                                     {
-                                        new_beams.push(Beam { position, direction });
+                                        new_beams.push(new_beam);
                                     }
                                 }
                             }
