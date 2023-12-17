@@ -1,4 +1,4 @@
-use std::{str::FromStr, collections::HashSet};
+use std::{collections::HashSet, str::FromStr};
 
 use anyhow::{bail, Error, Result};
 
@@ -96,7 +96,7 @@ impl Contraption {
         let mut energized_tiles: Vec<Vec<bool>> = self.0.iter().map(|r| r.iter().map(|_| false).collect()).collect();
         let mut beams: Vec<Beam> = vec![start];
         let mut beam_cache: HashSet<Beam> = HashSet::default();
-        beam_cache.insert(start.clone());
+        beam_cache.insert(start);
         let contraption_dimensions: Posn = (self.0.len(), self.0[0].len());
         while !beams.is_empty() {
             let mut new_beams: Vec<Beam> = Vec::new();
@@ -179,7 +179,7 @@ impl Contraption {
             }
             beams = Vec::new();
             for beam in new_beams {
-                if beam_cache.insert(beam.clone()) {
+                if beam_cache.insert(beam) {
                     beams.push(beam);
                 }
             }
@@ -198,23 +198,26 @@ pub fn part2(input: &str) -> Result<usize> {
     let contraption: Contraption = input.parse()?;
     let mut current_max_energized = 0;
     for i in 0..contraption.0.len() {
-        let start = Beam{direction: Direction::East, position: (i, 0)};
-        let energized: usize = contraption.energized_tiles(start).iter().map(|r| r.iter().filter(|&&x| x).count()).sum();
+        let start = Beam { direction: Direction::East, position: (i, 0) };
+        let energized: usize =
+            contraption.energized_tiles(start).iter().map(|r| r.iter().filter(|&&x| x).count()).sum();
         current_max_energized = energized.max(current_max_energized);
-        
-        let start = Beam{direction: Direction::West, position: (i, contraption.0[0].len() - 1)};
-        let energized: usize = contraption.energized_tiles(start).iter().map(|r| r.iter().filter(|&&x| x).count()).sum();
+
+        let start = Beam { direction: Direction::West, position: (i, contraption.0[0].len() - 1) };
+        let energized: usize =
+            contraption.energized_tiles(start).iter().map(|r| r.iter().filter(|&&x| x).count()).sum();
         current_max_energized = energized.max(current_max_energized);
     }
 
-    
     for j in 0..contraption.0[0].len() {
-        let start = Beam{direction: Direction::South, position: (0, j)};
-        let energized: usize = contraption.energized_tiles(start).iter().map(|r| r.iter().filter(|&&x| x).count()).sum();
+        let start = Beam { direction: Direction::South, position: (0, j) };
+        let energized: usize =
+            contraption.energized_tiles(start).iter().map(|r| r.iter().filter(|&&x| x).count()).sum();
         current_max_energized = energized.max(current_max_energized);
-        
-        let start = Beam{direction: Direction::North, position: (contraption.0.len() - 1, j)};
-        let energized: usize = contraption.energized_tiles(start).iter().map(|r| r.iter().filter(|&&x| x).count()).sum();
+
+        let start = Beam { direction: Direction::North, position: (contraption.0.len() - 1, j) };
+        let energized: usize =
+            contraption.energized_tiles(start).iter().map(|r| r.iter().filter(|&&x| x).count()).sum();
         current_max_energized = energized.max(current_max_energized);
     }
     Ok(current_max_energized)
