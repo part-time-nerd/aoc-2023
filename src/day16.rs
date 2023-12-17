@@ -246,5 +246,6 @@ mod tests {
     fn test_solution() {
         let input = std::fs::read_to_string("inputs/day16.txt").unwrap();
         assert_eq!(part1(&input).unwrap(), 7415);
+        assert_eq!(part2(&input).unwrap(), 7943);
     }
 }
