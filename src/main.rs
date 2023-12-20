@@ -15,6 +15,8 @@ mod day14;
 mod day15;
 mod day16;
 mod day17;
+mod day18;
+mod day19;
 
 fn main() {
     let input = std::fs::read_to_string("inputs/day01.txt").unwrap();
@@ -81,4 +83,11 @@ fn main() {
     let input = std::fs::read_to_string("inputs/day17.txt").unwrap();
     println!("17-1: {}", day17::part1(&input).unwrap());
     println!("17-2: {}", day17::part2(&input).unwrap());
+
+    let input = std::fs::read_to_string("inputs/day18.txt").unwrap();
+    println!("18-1: {}", day18::part1(&input).unwrap());
+
+    let input = std::fs::read_to_string("inputs/day19.txt").unwrap();
+    println!("19-1: {}", day19::part1(&input).unwrap());
+    println!("19-2: {}", day19::part2(&input).unwrap());
 }

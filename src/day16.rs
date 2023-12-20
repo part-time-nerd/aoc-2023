@@ -1,7 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-    str::FromStr,
-};
+use std::{collections::HashSet, str::FromStr};
 
 use anyhow::{bail, Error, Result};
 
@@ -98,55 +95,6 @@ impl Contraption {
     fn dimensions(&self) -> Posn {
         (self.0.len(), self.0[0].len())
     }
-
-    // fn energized_tiles_with_cache<'a>(&self, beam: Beam, cache: &mut HashMap<Beam, &'a [Vec<bool>]>) -> &'a [Vec<bool>] {
-    //     if let Some(&energized_tiles) = cache.get(&beam) {
-    //         return energized_tiles;
-    //     }
-    //     match self.0[beam.position.0][beam.position.1] {
-    //         Tile::Empty => {
-    //             if let Some(new_beam) = self.try_move(&beam) {
-    //                 let energized_tiles = self.energized_tiles_with_cache(new_beam, cache);
-    //                 // TODO: this will break with a loop
-    //                 cache.insert(beam, energized_tiles);
-    //                 return energized_tiles;
-    //             }
-    //         }
-    //         Tile::MirrorFwd => {
-    //             let direction = match beam.direction {
-    //                 Direction::North => Direction::East,
-    //                 Direction::South => Direction::West,
-    //                 Direction::East => Direction::North,
-    //                 Direction::West => Direction::South,
-    //             };
-    //             if let Some(new_beam) = self.try_move(&Beam{position: beam.position, direction }) {
-    //                 let energized_tiles = self.energized_tiles_with_cache(new_beam, cache);
-    //                 // TODO: this will break with a loop
-    //                 cache.insert(beam, energized_tiles);
-    //                 return energized_tiles;
-    //             }
-    //         }
-    //         Tile::MirrorBack => {
-    //             let direction = match beam.direction {
-    //                 Direction::North => Direction::West,
-    //                 Direction::South => Direction::East,
-    //                 Direction::East => Direction::South,
-    //                 Direction::West => Direction::North,
-    //             };
-    //             if let Some(new_beam) = self.try_move(&Beam{position: beam.position, direction }) {
-    //                 let energized_tiles = self.energized_tiles_with_cache(new_beam, cache);
-    //                 // TODO: this will break with a loop
-    //                 cache.insert(beam, energized_tiles);
-    //                 return energized_tiles;
-    //             }
-    //         }
-    //         Tile::SplitterVert => {todo !()
-    //         }
-    //         Tile::SplitterHori => {todo !()
-    //         }
-    //     }
-    //     todo!()
-    // }
 
     fn try_move(&self, beam: &Beam) -> Option<Beam> {
         try_move(&beam.position, &beam.direction, &self.dimensions())
