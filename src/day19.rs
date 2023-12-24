@@ -1,7 +1,7 @@
 use anyhow::{anyhow, bail, Context, Error, Result};
 use std::{
     borrow::Borrow,
-    collections::{HashMap, HashSet},
+    collections::HashSet,
     hash::{Hash, Hasher},
     ops::Range,
     str::FromStr,
