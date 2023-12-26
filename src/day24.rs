@@ -32,7 +32,7 @@ impl FromStr for HailStone {
 
 enum LinearCollision {
     None,                     // Parallel lines
-    Point { x: f64, y: f64 }, // Non-parallel non-identical lines
+    Point { x: f64, y: f64 }, // Non-parallel and non-identical lines
     Line { m: f64, b: f64 },  // identical lines
 }
 

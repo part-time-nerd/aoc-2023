@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Context, Error, Result};
-use std::{collections::HashMap, ops::Range, str::FromStr};
+use std::{collections::{HashMap, HashSet}, ops::Range, str::FromStr};
+use num::Integer;
 
 #[derive(Eq, PartialEq)]
 enum Instruction {
@@ -141,47 +142,8 @@ pub fn part2(input: &str) -> Result<usize> {
     let (instructions, graph): (Vec<Instruction>, GraphP2) = (i.chars().map(|c| c.into()).collect(), g.parse()?);
     let cycles: Vec<(usize, Range<usize>)> =
         graph.start.iter().map(|&s| detect_cycle(&instructions, &graph.edges, s)).collect();
-    // Now that we have the cycles for each of the paths, we need to get the set of terminal nodes along those cycles
-    let mut terminals: Vec<Vec<usize>> = Vec::new();
-    let mut cycle_lengths: Vec<usize> = Vec::new();
-    for (start_posn, cycle) in cycles {
-        cycle_lengths.push(cycle.len());
-        let mut cycle_terminals: Vec<usize> = Vec::new();
-        let mut posn = start_posn;
-        if graph.end.contains(&posn) {
-            cycle_terminals.push(cycle.start);
-        }
-        for step in cycle {
-            posn = match instructions[step % instructions.len()] {
-                Instruction::Left => graph.edges[posn].0,
-                Instruction::Right => graph.edges[posn].1,
-            };
-            if graph.end.contains(&posn) {
-                cycle_terminals.push(step);
-            }
-        }
-        terminals.push(cycle_terminals);
-    }
-    println!("{:?}", cycle_lengths);
-    println!("{:?}", terminals);
-
-    panic!();
-
-    let mut posn = graph.start;
-    for step in 0.. {
-        posn.sort(); // The ending positions are also sorted
-        if posn == graph.end {
-            return Ok(step);
-        }
-        posn = posn
-            .into_iter()
-            .map(|p| match instructions[step % instructions.len()] {
-                Instruction::Left => graph.edges[p].0,
-                Instruction::Right => graph.edges[p].1,
-            })
-            .collect();
-    }
-    Err(anyhow!("Reached end of iteration (max usize) without finding the end of the graph"))
+    // Bit of a hack: just use the cycle lengths directly
+    Ok(cycles.iter().fold(1, |a, b| a.lcm(&b.1.len())))
 }
 
 #[cfg(test)]
@@ -225,13 +187,13 @@ XXX = (XXX, XXX)
 
     #[test]
     fn test_example_p2() {
-        // assert_eq!(part2(EXAMPLE_3).unwrap(), 6);
+        assert_eq!(part2(EXAMPLE_3).unwrap(), 6);
     }
 
     #[test]
     fn test_solution() {
         let input = std::fs::read_to_string("inputs/day08.txt").unwrap();
         assert_eq!(part1(&input).unwrap(), 21389);
-        // assert_eq!(part2(&input).unwrap(), 0);
+        assert_eq!(part2(&input).unwrap(), 21083806112641);
     }
 }
