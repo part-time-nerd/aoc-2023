@@ -1,6 +1,10 @@
 use anyhow::{anyhow, Context, Error, Result};
-use std::{collections::{HashMap, HashSet}, ops::Range, str::FromStr};
 use num::Integer;
+use std::{
+    collections::{HashMap, HashSet},
+    ops::Range,
+    str::FromStr,
+};
 
 #[derive(Eq, PartialEq)]
 enum Instruction {
