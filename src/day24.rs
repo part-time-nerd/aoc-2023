@@ -103,6 +103,11 @@ pub fn part1(input: &str, test_area: RangeInclusive<f64>) -> Result<usize> {
     Ok(total_collisions)
 }
 
+pub fn part2(input: &str) -> Result<usize> {
+    let hailstones = parse_input(input)?;
+    Ok(0)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -117,6 +122,7 @@ mod tests {
     #[test]
     fn test_example() {
         assert_eq!(part1(EXAMPLE, 7.0..=27.0).unwrap(), 2);
+        assert_eq!(part2(EXAMPLE).unwrap(), 47);
     }
 
     #[test]
