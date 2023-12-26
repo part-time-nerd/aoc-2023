@@ -79,7 +79,6 @@ pub fn part1(input: &str) -> Result<usize> {
 
 struct GraphP2 {
     start: Vec<usize>,
-    end: Vec<usize>,
     edges: Vec<(usize, usize)>,
 }
 
@@ -110,15 +109,9 @@ impl FromStr for GraphP2 {
             edges.push((left_idx, right_idx))
         }
 
-        // This part is different from P1
         let start: Vec<usize> = nodes.iter().enumerate().filter(|(_, n)| n.ends_with('A')).map(|(i, _)| i).collect();
-        let mut end: Vec<usize> = nodes.iter().enumerate().filter(|(_, n)| n.ends_with('Z')).map(|(i, _)| i).collect();
-        assert_eq!(start.len(), end.len(), "There should be the same number of starting and ending nodes");
 
-        // Sort the end so the comparisons can be faster
-        end.sort();
-
-        Ok(Self { start, end, edges })
+        Ok(Self { start, edges })
     }
 }
 
@@ -143,6 +136,9 @@ pub fn part2(input: &str) -> Result<usize> {
     let cycles: Vec<(usize, Range<usize>)> =
         graph.start.iter().map(|&s| detect_cycle(&instructions, &graph.edges, s)).collect();
     // Bit of a hack: just use the cycle lengths directly
+    // We assume the last node of the cycle is an end
+    // We also assume that this node will be the one that matters for the solution
+    // (There can be multiple terminal nodes on a cycle, but it seems like that can be ignored)
     Ok(cycles.iter().fold(1, |a, b| a.lcm(&b.1.len())))
 }
 
