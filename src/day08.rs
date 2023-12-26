@@ -1,7 +1,7 @@
-use anyhow::{anyhow, Context, Error, Result};
+use anyhow::{Context, Error, Result};
 use num::Integer;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     ops::Range,
     str::FromStr,
 };
