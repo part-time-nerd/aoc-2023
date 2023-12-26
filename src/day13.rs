@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use anyhow::{Error, Result};
+use anyhow::{anyhow, Error, Result};
 
 struct Pattern(Vec<Vec<bool>>);
 
@@ -28,72 +28,69 @@ impl Pattern {
         self.0[0].len()
     }
 
-    fn value(&self) -> usize {
-        if let Some(line) = self.vertical_reflection_line() {
-            return line;
+    fn value(&self, changes: usize) -> Result<usize> {
+        for i in 1..self.width() {
+            if self.required_changes_for_vertical_line_of_reflection(i) == changes {
+                return Ok(i);
+            }
         }
 
-        if let Some(line) = self.horizontal_reflection_line() {
-            return 100 * line;
+        for i in 1..self.height() {
+            if self.required_changes_for_horizontal_line_of_reflection(i) == changes {
+                return Ok(100 * i);
+            }
         }
 
-        panic!("No line of reflection");
+        Err(anyhow!("No line of reflection"))
     }
 
-    fn is_vertical_reflection_line(&self, mut right_idx: usize) -> bool {
+    fn required_changes_for_vertical_line_of_reflection(&self, mut right_idx: usize) -> usize {
+        let mut mismatches = 0;
+
         let mut left_idx = right_idx - 1; // Assume that right_idx >= 1
         loop {
             for row in self.0.iter() {
                 if row[left_idx] != row[right_idx] {
-                    // There is a mismatch: this is not a line of reflection
-                    return false;
+                    mismatches += 1;
                 }
             }
             if left_idx == 0 || right_idx == self.width() - 1 {
-                // We ignore any extra columns on one side or the other: we have found a line of reflection
-                return true
+                return mismatches;
             }
-            // Updating indicies is safe due to the while loop condition
             left_idx -= 1;
             right_idx += 1;
         }
     }
 
-    fn is_horizontal_reflection_line(&self, mut down_idx: usize) -> bool {
+    fn required_changes_for_horizontal_line_of_reflection(&self, mut down_idx: usize) -> usize {
+        let mut mismatches = 0;
+
         let mut up_idx = down_idx - 1; // Assume that down_idx >= 1
         loop {
-            if self.0[up_idx] != self.0[down_idx] {
-                return false;
-            }
+            mismatches += self.0[up_idx].iter().zip(self.0[down_idx].iter()).filter(|(a, b)| a != b).count();
             if up_idx == 0 || down_idx == self.height() - 1 {
-                // Ignoring any extra rows, this is a line of reflection
-                return true
+                return mismatches;
             }
             up_idx -= 1;
             down_idx += 1;
         }
     }
-
-    fn vertical_reflection_line(&self) -> Option<usize> {
-        for i in 1..self.width() {
-            if self.is_vertical_reflection_line(i) {
-                return Some(i);
-            }
-        }
-        None
-    }
-    fn horizontal_reflection_line(&self) -> Option<usize> {
-        for i in 1..self.height() {
-            if self.is_horizontal_reflection_line(i) {
-                return Some(i);
-            }
-        }
-        None
-    }
 }
 
 pub fn part1(input: &str) -> Result<usize> {
-    Ok(parse_input(input)?.into_iter().map(|p| p.value()).sum())
+    let mut total = 0;
+    for pattern in parse_input(input)? {
+        total += pattern.value(0)?;
+    }
+    Ok(total)
+}
+
+pub fn part2(input: &str) -> Result<usize> {
+    let mut total = 0;
+    for pattern in parse_input(input)? {
+        total += pattern.value(1)?;
+    }
+    Ok(total)
 }
 
 #[cfg(test)]
@@ -120,11 +117,13 @@ mod tests {
     #[test]
     fn test_example() {
         assert_eq!(part1(EXAMPLE).unwrap(), 405);
+        assert_eq!(part2(EXAMPLE).unwrap(), 400);
     }
 
     #[test]
     fn test_solution() {
         let input = std::fs::read_to_string("inputs/day13.txt").unwrap();
         assert_eq!(part1(&input).unwrap(), 39939);
+        assert_eq!(part2(&input).unwrap(), 32069);
     }
 }

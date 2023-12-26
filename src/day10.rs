@@ -164,7 +164,7 @@ pub fn part2(input: &str) -> Result<usize> {
             }
         }
     }
-    
+
     Ok(inside_tiles)
 }
 
