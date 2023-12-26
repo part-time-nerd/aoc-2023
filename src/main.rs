@@ -70,7 +70,7 @@ fn main() {
     // println!("12-1: {}", day12::part1(&input).unwrap());
 
     let input = std::fs::read_to_string("inputs/day13.txt").unwrap();
-    // println!("13-1: {}", day13::part1(&input).unwrap());
+    println!("13-1: {}", day13::part1(&input).unwrap());
 
     let input = std::fs::read_to_string("inputs/day14.txt").unwrap();
     println!("14-1: {}", day14::part1(&input).unwrap());

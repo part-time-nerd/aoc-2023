@@ -1,10 +1,9 @@
-use std::collections::HashSet;
+use std::str::FromStr;
 
-use anyhow::{bail, Context, Error, Result};
+use anyhow::{anyhow, bail, Context, Error, Result};
 use pathfinding::directed::dijkstra::dijkstra_all;
 
 type Posn = (usize, usize);
-type Edge = (Posn, Posn);
 
 #[derive(PartialEq, Eq)]
 enum Tile {
@@ -50,80 +49,123 @@ impl TryFrom<char> for Tile {
     }
 }
 
-fn parse_input_matrix(input: &str) -> Result<Vec<Vec<Tile>>> {
-    let mut matrix: Vec<Vec<Tile>> = Vec::new();
-    for l in input.lines() {
-        let mut row: Vec<Tile> = Vec::new();
-        for c in l.chars() {
-            row.push(c.try_into()?);
+struct Matrix(Vec<Vec<Tile>>);
+
+impl FromStr for Matrix {
+    type Err = Error;
+    fn from_str(input: &str) -> Result<Self> {
+        let mut matrix: Vec<Vec<Tile>> = Vec::new();
+        for l in input.lines() {
+            let mut row: Vec<Tile> = Vec::new();
+            for c in l.chars() {
+                row.push(c.try_into()?);
+            }
+            matrix.push(row);
         }
-        matrix.push(row);
+        Ok(Self(matrix))
     }
-    Ok(matrix)
 }
 
-fn matrix_start_posn(matrix: &[Vec<Tile>]) -> Option<Posn> {
-    for (i, row) in matrix.iter().enumerate() {
-        for (j, tile) in row.iter().enumerate() {
-            if tile == &Tile::Start {
-                return Some((i, j));
+impl Matrix {
+    fn start(&self) -> Result<Posn> {
+        for (i, row) in self.0.iter().enumerate() {
+            for (j, tile) in row.iter().enumerate() {
+                if tile == &Tile::Start {
+                    return Ok((i, j));
+                }
             }
         }
+        Err(anyhow!("Could not find the start position"))
     }
-    None
-}
 
-fn matrix_adjacency(matrix: &[Vec<Tile>], posn: Posn) -> Vec<Posn> {
-    let mut adjacent: Vec<Posn> = Vec::new();
-    let (i, j) = posn;
-    if matrix[i][j].is_connected_north() && i != 0 && matrix[i - 1][j].is_connected_south() {
-        adjacent.push((i - 1, j));
+    fn neighbours(&self, (i, j): Posn) -> Vec<Posn> {
+        let mut adjacent: Vec<Posn> = Vec::new();
+        if self.0[i][j].is_connected_north() && i != 0 && self.0[i - 1][j].is_connected_south() {
+            adjacent.push((i - 1, j));
+        }
+        if self.0[i][j].is_connected_east() && self.0[i].get(j + 1).is_some_and(|t| t.is_connected_west()) {
+            adjacent.push((i, j + 1));
+        }
+        if self.0[i][j].is_connected_south() && self.0.get(i + 1).is_some_and(|r| r[j].is_connected_north()) {
+            adjacent.push((i + 1, j));
+        }
+        if self.0[i][j].is_connected_west() && j != 0 && self.0[i][j - 1].is_connected_east() {
+            adjacent.push((i, j - 1));
+        }
+        adjacent
     }
-    if matrix[i][j].is_connected_east() && matrix[i].get(j + 1).is_some_and(|t| t.is_connected_west()) {
-        adjacent.push((i, j + 1));
-    }
-    if matrix[i][j].is_connected_south() && matrix.get(i + 1).is_some_and(|r| r[j].is_connected_north()) {
-        adjacent.push((i + 1, j));
-    }
-    if matrix[i][j].is_connected_west() && j != 0 && matrix[i][j - 1].is_connected_east() {
-        adjacent.push((i, j - 1));
-    }
-    adjacent
 }
 
 pub fn part1(input: &str) -> Result<usize> {
-    let matrix = parse_input_matrix(input)?;
-    let start = matrix_start_posn(&matrix).context("Could not find the start position")?;
-    let shortest_paths = dijkstra_all(&start, |&posn| matrix_adjacency(&matrix, posn).into_iter().map(|a| (a, 1)));
+    let matrix: Matrix = input.parse()?;
+    let shortest_paths = dijkstra_all(&matrix.start()?, |&posn| matrix.neighbours(posn).into_iter().map(|a| (a, 1)));
     shortest_paths.iter().map(|(_node, (_previous, length))| *length as usize).max().context("No paths from start")
 }
 
-enum Spin {
-    Clockwise,
-    CounterClockwise,
-}
-
-fn loop_direction(matrix: &[Vec<Tile>]) -> Result<(Posn, Spin)> {
-    // Starting at start and travelling to next, what is the spin direction
-    let start = matrix_start_posn(&matrix).context("Could not find the start position")?;
-    let next_to_start = matrix_adjacency(&matrix, start);
-    let first_step = next_to_start[0]; // This is arbitrary: next_to_start[1] would give oposite spin
-    todo!();
-    let spin = Spin::Clockwise;
-    Ok((first_step, spin))
+fn is_boundary_transition(a: &Tile, b: &Tile) -> bool {
+    match b {
+        Tile::Ground => panic!("Should not be getting a ground"),
+        Tile::Start | Tile::Hori | Tile::NW | Tile::SW => match a {
+            Tile::Ground | Tile::Vert | Tile::NW | Tile::SW => true,
+            _ => false,
+        },
+        Tile::Vert | Tile::NE | Tile::SE => true,
+    }
 }
 
 pub fn part2(input: &str) -> Result<usize> {
-    let matrix = parse_input_matrix(input)?;
+    let matrix: Matrix = input.parse()?;
 
-    let inside_tiles: HashSet<Posn> = HashSet::new();
+    let mut inside_tiles = 0;
 
-    let start = matrix_start_posn(&matrix).context("Could not find the start position")?;
-    let next_to_start = matrix_adjacency(&matrix, start);
+    // Using a ray casing method
+    // Use diagonal rays so we don't have to worry about edges
 
-    let mut current_loop_direction: Option<Spin> = None;
+    // Start with rays starting on the left side, going up at 45 degrees
+    for ray_start in 0..matrix.0.len() {
+        let mut inside: bool = false;
+        for offset in 0.. {
+            if offset > ray_start {
+                break;
+            }
+            let row = &matrix.0[ray_start - offset];
+            if offset >= row.len() {
+                break;
+            }
+            match &row[offset] {
+                Tile::Ground => {
+                    if inside {
+                        inside_tiles += 1;
+                    }
+                }
+                _ => inside = !inside,
+            }
+        }
+    }
 
-    todo!()
+    // Now the bottom edge, with care not to duplicate the corner case
+    for ray_start in 1..matrix.0[matrix.0.len() - 1].len() {
+        let mut inside: bool = false;
+        for offset in 0.. {
+            if offset >= matrix.0.len() {
+                break;
+            }
+            let row = &matrix.0[matrix.0.len() - 1 - offset];
+            if ray_start + offset >= row.len() {
+                break;
+            }
+            match &row[ray_start + offset] {
+                Tile::Ground => {
+                    if inside {
+                        inside_tiles += 1;
+                    }
+                }
+                _ => inside = !inside,
+            }
+        }
+    }
+    
+    Ok(inside_tiles)
 }
 
 #[cfg(test)]
@@ -169,6 +211,17 @@ LJ.LJ
 ...........
 ";
 
+    const P2_EXAMPLE_CLOSED: &str = "..........
+.S------7.
+.|F----7|.
+.||....||.
+.||....||.
+.|L-7F-J|.
+.|..||..|.
+.L--JL--J.
+..........
+";
+
     const LARGER_EXAMPLE: &str = ".F----7F7F7F7F-7....
 .|F--7||||||||FJ....
 .||.FJ||||||||L7....
@@ -203,7 +256,8 @@ L7JLJL-JLJLJL--JLJ.L
 
     #[test]
     fn test_example_part2() {
-        // assert_eq!(part2(P2_EXAMPLE).unwrap(), 4);
+        assert_eq!(part2(P2_EXAMPLE).unwrap(), 4);
+        assert_eq!(part2(P2_EXAMPLE_CLOSED).unwrap(), 4);
         // assert_eq!(part2(LARGER_EXAMPLE).unwrap(), 10);
         // assert_eq!(part2(LARGER_EXAMPLE_WITH_CRUD).unwrap(), 10);
     }

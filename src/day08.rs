@@ -1,10 +1,6 @@
 use anyhow::{Context, Error, Result};
 use num::Integer;
-use std::{
-    collections::HashMap,
-    ops::Range,
-    str::FromStr,
-};
+use std::{collections::HashMap, ops::Range, str::FromStr};
 
 #[derive(Eq, PartialEq)]
 enum Instruction {
@@ -140,9 +136,10 @@ pub fn part2(input: &str) -> Result<usize> {
     let cycles: Vec<(usize, Range<usize>)> =
         graph.start.iter().map(|&s| detect_cycle(&instructions, &graph.edges, s)).collect();
     // Bit of a hack: just use the cycle lengths directly
+    // We assume that the lead time to a cycle does not matter
     // We assume the last node of the cycle is an end
-    // We also assume that this node will be the one that matters for the solution
-    // (There can be multiple terminal nodes on a cycle, but it seems like that can be ignored)
+    // We also assume that this last node will be the one that matters for the solution
+    // (There can be multiple terminal nodes on a cycle, but we ignore this)
     Ok(cycles.iter().fold(1, |a, b| a.lcm(&b.1.len())))
 }
 
