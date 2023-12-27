@@ -135,9 +135,25 @@ impl DigPlan {
         }
 
         let mut dig_map = self.dig_map();
-        for row in dig_map.iter_mut() {
+
+        // The edge cases are a bit tricky: store the top and bottom to help with this
+        let mut top: Vec<usize> = Vec::new();
+        let mut bottom: Vec<usize> = Vec::new();
+        for (i, row) in dig_map.iter().enumerate() {
+            for (j, &is_wall) in row.iter().enumerate() {
+                if is_wall {
+                    if j >= top.len() {
+                        top.push(i);
+                        bottom.push(i);
+                    } else {
+                        bottom[j] = i;
+                    }
+                }
+            }
+        }
+        for (i, row) in dig_map.iter_mut().enumerate() {
             let mut state = DigState::Outside;
-            for item in row.iter_mut() {
+            for (j, item) in row.iter_mut().enumerate() {
                 match state {
                     DigState::Outside => {
                         if *item {
@@ -148,13 +164,17 @@ impl DigPlan {
                         if *item {
                             state = DigState::OuterEdge;
                         } else {
-                            *item = true;
+                            if top[j] < i && bottom[j] > i {
+                                *item = true;
+                            }
                         }
                     }
                     DigState::InnerEdge => {
                         if !*item {
                             state = DigState::Inside;
-                            *item = true;
+                            if top[j] < i && bottom[j] > i {
+                                *item = true;
+                            }
                         }
                     }
                     DigState::OuterEdge => {
@@ -236,6 +256,11 @@ U 2 (#7a21e3)
 
     #[test]
     fn test_example() {
+        assert_eq!(part1(EXAMPLE).unwrap(), 62);
+    }
+
+    #[test]
+    fn test_solution() {
         assert_eq!(part1(EXAMPLE).unwrap(), 62);
     }
 }
