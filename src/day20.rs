@@ -135,7 +135,7 @@ fn parse_input<'a>(input: &'a str) -> Result<HashMap<&'a str, Module<'a>>> {
             conjunction_inputs.insert(module.label, Vec::default());
         }
     }
-    // Collect the input names for each conjunction module
+    // Collect the inputs for each conjunction module
     for module in modules.values() {
         for &output in &module.outputs {
             if let Some(conjunction_module_inputs) = conjunction_inputs.get_mut(output) {
@@ -145,14 +145,14 @@ fn parse_input<'a>(input: &'a str) -> Result<HashMap<&'a str, Module<'a>>> {
     }
     // Set a low signal for each conjunction module input
     for (module_name, module_inputs) in conjunction_inputs {
-        let module = modules.get_mut(module_name).with_context(|| format!("missing module {}", module_name))?;
+        let module = modules.get_mut(module_name).unwrap();
         match &mut module.kind {
             ModuleKind::Conjunction(input_pulses) => {
                 for input in module_inputs {
                     input_pulses.insert(input, false);
                 }
             }
-            _ => panic!("There was a non-conjunction module {} in the conjunction_inputs hash", module_name),
+            _ => panic!("There was a non-conjunction module {} in the conjunction_inputs map", module_name),
         }
     }
 
@@ -169,6 +169,14 @@ pub fn part1(input: &str) -> Result<usize> {
         high += h;
     }
     Ok(low * high)
+}
+
+pub fn part2(input: &str) -> Result<usize> {
+    let modules = parse_input(input)?;
+    let [rxin] = modules.values().filter(|m| m.outputs.contains(&"rx")).map(|m| m.label).collect::<Vec<_>>()[..] else {
+        panic!("Expected a single input value to rx");
+    };
+    todo!()
 }
 
 #[cfg(test)]
@@ -199,5 +207,6 @@ mod tests {
     fn test_solution() {
         let input = std::fs::read_to_string("inputs/day20.txt").unwrap();
         assert_eq!(part1(&input).unwrap(), 747304011);
+        assert_eq!(part2(&input).unwrap(), 0);
     }
 }
