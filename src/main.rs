@@ -106,6 +106,7 @@ fn main() {
 
     let input = std::fs::read_to_string("inputs/day22.txt").unwrap();
     println!("22-1: {}", day22::part1(&input).unwrap());
+    println!("22-2: {}", day22::part2(&input).unwrap());
 
     let input = std::fs::read_to_string("inputs/day23.txt").unwrap();
     println!("23-1: {}", day23::part1(&input).unwrap());

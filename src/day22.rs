@@ -58,7 +58,7 @@ impl Brick {
     }
 }
 
-fn settle(bricks: &mut [Brick]) -> HashSet<Posn> {
+fn settle(bricks: &mut [Brick]){
     bricks.sort_by(|a, b| a.0.z.cmp(&b.0.z));
 
     let mut settled_cover: HashSet<Posn> = HashSet::default();
@@ -84,8 +84,41 @@ fn settle(bricks: &mut [Brick]) -> HashSet<Posn> {
             settled_cover.insert(p);
         }
     }
+}
 
-    settled_cover
+fn num_unsettled(bricks: &mut [Brick]) -> usize {
+    bricks.sort_by(|a, b| a.0.z.cmp(&b.0.z));
+
+    let mut settled_cover: HashSet<Posn> = HashSet::default();
+
+    let mut count = 0;
+    for brick in bricks.iter_mut() {
+        let mut settled = true;
+        loop {
+            if brick.is_grounded() {
+                break;
+            }
+
+            brick.0.z -= 1;
+            brick.1.z -= 1;
+
+            if brick.all().iter().any(|p| settled_cover.contains(p)) {
+                brick.0.z += 1;
+                brick.1.z += 1;
+                break;
+            }
+            settled = false;
+        }
+        if !settled {
+            count += 1;
+        }
+
+        for p in brick.all() {
+            settled_cover.insert(p);
+        }
+    }
+
+    count
 }
 
 pub fn part1(input: &str) -> Result<usize> {
@@ -93,23 +126,37 @@ pub fn part1(input: &str) -> Result<usize> {
     for l in input.lines() {
         bricks.push(l.parse()?);
     }
-    let cover = settle(&mut bricks);
+    settle(&mut bricks);
 
     // 10s, not great
     let mut could_disintegrate = 0;
     for i in 0..bricks.len() {
         let mut possibly_settled = bricks.clone();
         possibly_settled.remove(i);
-        let mut new_cover = settle(&mut possibly_settled);
-        for p in bricks[i].all() {
-            new_cover.insert(p);
-        }
-        if new_cover == cover {
+        if num_unsettled(&mut possibly_settled) == 0 {
             could_disintegrate += 1;
         }
     }
 
     Ok(could_disintegrate)
+}
+
+pub fn part2(input: &str) -> Result<usize> {
+    let mut bricks: Vec<Brick> = Vec::new();
+    for l in input.lines() {
+        bricks.push(l.parse()?);
+    }
+    settle(&mut bricks);
+
+    // 10s, not great
+    let mut total = 0;
+    for i in 0..bricks.len() {
+        let mut possibly_settled = bricks.clone();
+        possibly_settled.remove(i);
+        total += num_unsettled(&mut possibly_settled);
+    }
+
+    Ok(total)
 }
 
 #[cfg(test)]
@@ -128,11 +175,13 @@ mod tests {
     #[test]
     fn test_example() {
         assert_eq!(part1(EXAMPLE).unwrap(), 5);
+        assert_eq!(part2(EXAMPLE).unwrap(), 7);
     }
 
     #[test]
     fn test_solution() {
         let input = std::fs::read_to_string("inputs/day22.txt").unwrap();
         assert_eq!(part1(&input).unwrap(), 507);
+        assert_eq!(part2(&input).unwrap(), 51733);
     }
 }
